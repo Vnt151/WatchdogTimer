@@ -1,0 +1,19 @@
+<?xml version="1" encoding="UTF-8"?>
+<!DOCTYPE gowin-fpga-project>
+<Project>
+    <Template>FPGA</Template>
+    <Version>5</Version>
+    <Device name="GW1N-1P5C" pn="GW1N-UV1P5QN48XC7/I6">gw1n1p5c-019</Device>
+    <FileList>
+        <File path="src/config_subsystem.v" type="file.verilog" enable="1"/>
+        <File path="src/gowin_osc/gowin_osc.v" type="file.verilog" enable="1"/>
+        <File path="src/io_buffers.v" type="file.verilog" enable="1"/>
+        <File path="src/io_debounce.v" type="file.verilog" enable="1"/>
+        <File path="src/regfile_and_parser.v" type="file.verilog" enable="1"/>
+        <File path="src/sys_timebase.v" type="file.verilog" enable="1"/>
+        <File path="src/uart_transceiver.v" type="file.verilog" enable="1"/>
+        <File path="src/watchdog_fsm_core.v" type="file.verilog" enable="1"/>
+        <File path="src/watchdog_top.v" type="file.verilog" enable="1"/>
+        <File path="src/Watchdog.cst" type="file.cst" enable="1"/>
+    </FileList>
+</Project>

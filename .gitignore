@@ -1,0 +1,16 @@
+# Ignore Gowin synthesis and implementation results
+impl/
+
+# Ignore log and temporary files
+*.log
+*.html
+*.xml
+*.json
+*.vg
+*.cfg
+*.do
+*.user
+
+# Keep the project file and sources
+!*.gprj
+!src/

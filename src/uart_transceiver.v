@@ -1,5 +1,5 @@
 module uart_transceiver #(
-    parameter CLK_FREQ  = 27_000_000, // Tần số xung nhịp hệ thống
+    parameter CLK_FREQ  = 25_000_000, // Tần số xung nhịp hệ thống
     parameter BAUD_RATE = 115200      // Tốc độ truyền baud
 )(
     input  wire       clk,

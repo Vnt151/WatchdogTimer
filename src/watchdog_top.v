@@ -1,6 +1,5 @@
 module watchdog_top (
-    input  wire clk,        // Clock 27MHz từ board Kiwi
-    input  wire rst_n,      // Reset hệ thống
+    // Không cần clk và rst_n từ chân vật lý nữa
     input  wire s1_wdi,     // Nút nhấn S1 (WDI)
     input  wire s2_en,      // Nút nhấn S2 (EN)
     
@@ -12,6 +11,31 @@ module watchdog_top (
 );
 
     // =========================================================================
+    // 1. TẠO XUNG CLOCK 25MHz TỪ DAO ĐỘNG NỘI
+    // =========================================================================
+    wire clk_25mhz;
+    Gowin_OSC u_osc (
+        .oscen(1'b1),
+        .oscout(clk_25mhz)
+    );
+
+    // =========================================================================
+    // 2. POWER-ON RESET (Tự động tạo xung Reset khi mới cấp điện)
+    // =========================================================================
+    reg [7:0] por_cnt = 8'd0;
+    reg rst_n_por = 1'b0;
+
+    always @(posedge clk_25mhz) begin
+        // Đếm 255 nhịp clock đầu tiên để giữ trạng thái Reset
+        if (por_cnt != 8'hFF) begin
+            por_cnt   <= por_cnt + 1'b1;
+            rst_n_por <= 1'b0;
+        end else begin
+            rst_n_por <= 1'b1; // Sau đó thả ra để hệ thống hoạt động
+        end
+    end
+
+    // =========================================================================
     // KHAI BÁO DÂY DẪN NỘI BỘ
     // =========================================================================
     wire tick_1us, tick_1ms;
@@ -19,25 +43,23 @@ module watchdog_top (
     wire [31:0] tWD, tRST, ctrl_reg, status_reg;
     wire [15:0] arm_delay;
     wire wdo_internal, enout_internal;
-    
-    wire sw_kick_wire; // Dây nối tín hiệu Kick ảo từ PC xuống FSM
+    wire sw_kick_wire;
 
     // =========================================================================
     // LẮP RÁP CÁC MODULE
     // =========================================================================
 
-    // 1. Tạo nhịp thời gian hệ thống
+    // Cấp Clock nội và Reset tự động cho tất cả module
     sys_timebase u_time (
-        .clk        (clk), 
-        .rst_n      (rst_n),
+        .clk        (clk_25mhz), 
+        .rst_n      (rst_n_por),
         .tick_1us   (tick_1us), 
         .tick_1ms   (tick_1ms)
     );
 
-    // 2. Chống dội nút nhấn vật lý
     io_debounce u_deb (
-        .clk        (clk), 
-        .rst_n      (rst_n), 
+        .clk        (clk_25mhz), 
+        .rst_n      (rst_n_por), 
         .tick_1ms   (tick_1ms),
         .s1_wdi_in  (s1_wdi), 
         .s2_en_in   (s2_en),
@@ -45,10 +67,9 @@ module watchdog_top (
         .en_clean   (en_clean)
     );
 
-    // 3. Hệ thống cấu hình UART
     config_subsystem u_cfg (
-        .clk            (clk), 
-        .rst_n          (rst_n),
+        .clk            (clk_25mhz), 
+        .rst_n          (rst_n_por),
         .uart_rx        (uart_rx), 
         .uart_tx        (uart_tx),
         .status_in      (status_reg),
@@ -56,18 +77,17 @@ module watchdog_top (
         .tRST_out       (tRST),
         .arm_delay_out  (arm_delay),
         .ctrl_out       (ctrl_reg),
-        .sw_kick_out    (sw_kick_wire)  // Cắm dây xuất Kick ảo
+        .sw_kick_out    (sw_kick_wire)
     );
 
-    // 4. Lõi xử lý Watchdog FSM
     watchdog_fsm_core u_core (
-        .clk          (clk), 
-        .rst_n        (rst_n),
+        .clk          (clk_25mhz), 
+        .rst_n        (rst_n_por),
         .tick_1us     (tick_1us), 
         .tick_1ms     (tick_1ms),
         .en_clean     (en_clean), 
         .wdi_clean    (wdi_clean),
-        .sw_kick      (sw_kick_wire),   // Nhận dây Kick ảo
+        .sw_kick      (sw_kick_wire), 
         .ctrl_reg     (ctrl_reg),
         .tWD_ms       (tWD), 
         .tRST_ms      (tRST), 
@@ -77,7 +97,6 @@ module watchdog_top (
         .enout_logic  (enout_internal)
     );
 
-    // 5. Đệm ngõ ra Open-Drain điều khiển LED
     io_buffers u_buf (
         .wdo_logic    (wdo_internal),
         .enout_logic  (enout_internal),
