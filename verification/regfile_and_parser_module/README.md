@@ -43,5 +43,5 @@ This document outlines the test scenarios and verification results for the `regf
 
 ## 4. Verification Artifacts
 The concrete evidence of this verification phase is stored alongside this document:
-* **Transcript Log**: [sim_log.txt](./sim_log.txt) - Contains the automated simulation output, showing zero compilation errors and successful test assertions.
+* **Transcript Log**: [regfileparser_sim_log.txt](./regfileparser_sim_log.txt) - Contains the automated simulation output, showing zero compilation errors and successful test assertions.
 * **Waveform Evidence**: [waveform.pdf](./waveform.pdf) - Visual confirmation of the logic's 6-state packet parsing and proper register latching upon checksum validation.
