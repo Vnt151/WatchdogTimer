@@ -65,7 +65,7 @@ module regfile_and_parser (
                     S_IDLE: begin
                         if (rx_data == 8'h55) begin
                             state   <= S_CMD;
-                            cal_chk <= 8'h55;
+                            cal_chk <= 8'h00;
                         end
                     end
                     S_CMD: begin
