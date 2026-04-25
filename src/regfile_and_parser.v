@@ -6,7 +6,7 @@ module regfile_and_parser (
     input  wire [7:0]  rx_data,
     input  wire        rx_valid,
     
-    // GIAO TIẾP TX (MỚI BỔ SUNG)
+    // GIAO TIẾP TX 
     output reg  [7:0]  tx_data,
     output reg         tx_req,
     input  wire        tx_ready,
@@ -17,7 +17,7 @@ module regfile_and_parser (
     output wire [31:0] tRST_out,
     output wire [15:0] arm_delay_out,
     output wire [31:0] ctrl_out,
-    output reg         sw_kick_out  // TÍN HIỆU KICK ẢO (MỚI BỔ SUNG)
+    output reg         sw_kick_out  
 );
 
     reg [31:0] reg_ctrl;
@@ -30,12 +30,16 @@ module regfile_and_parser (
     assign tRST_out      = reg_trst;
     assign arm_delay_out = reg_arm_delay;
 
-    localparam S_IDLE = 3'd0;
-    localparam S_CMD  = 3'd1;
-    localparam S_ADDR = 3'd2;
-    localparam S_LEN  = 3'd3;
-    localparam S_DATA = 3'd4;
-    localparam S_CHK  = 3'd5;
+    localparam S_IDLE    = 3'd0;
+    localparam S_CMD     = 3'd1;
+    localparam S_ADDR    = 3'd2;
+    localparam S_LEN     = 3'd3;
+    localparam S_DATA    = 3'd4;
+    localparam S_CHK     = 3'd5;
+    localparam S_TX_READ = 3'd6;
+
+    reg [31:0] read_buf;    
+    reg [2:0]  tx_byte_cnt; 
 
     reg [2:0] state;
     reg [7:0] cmd, addr, len;
@@ -45,19 +49,21 @@ module regfile_and_parser (
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            state <= S_IDLE;
+            state         <= S_IDLE;
             reg_ctrl      <= 32'd0;
             reg_twd       <= 32'd1600;
             reg_trst      <= 32'd200;
             reg_arm_delay <= 16'd150;
             tx_req        <= 1'b0;
             sw_kick_out   <= 1'b0;
+            read_buf      <= 32'd0;
+            tx_byte_cnt   <= 3'd0;
         end else begin
             // Xóa các xung điều khiển ảo sau 1 nhịp clock
-            tx_req <= 1'b0;      
+            tx_req      <= 1'b0;     
             sw_kick_out <= 1'b0; 
             
-            // Xóa bit CLR_FAULT (bit 2 của CTRL) theo chuẩn Write-1-to-clear
+            // Xóa bit CLR_FAULT (bit 2 của CTRL) 
             if (reg_ctrl[2] == 1'b1) reg_ctrl[2] <= 1'b0;
 
             if (rx_valid) begin
@@ -85,7 +91,7 @@ module regfile_and_parser (
                             byte_cnt <= 0;
                             state    <= S_DATA;
                         end else begin
-                            state <= S_CHK; // Lệnh không có data (như Kick, Đọc)
+                            state <= S_CHK; 
                         end
                     end
                     S_DATA: begin
@@ -104,25 +110,62 @@ module regfile_and_parser (
                                     8'h08: reg_trst      <= {payload[3], payload[2], payload[1], payload[0]};
                                     8'h0C: reg_arm_delay <= {payload[1], payload[0]};
                                 endcase
-                                tx_data <= 8'hAA; // Trả ACK báo ghi thành công
+                                tx_data <= 8'hAA; 
                                 tx_req  <= 1'b1;
+                                state   <= S_IDLE;
                             end
-                            // 2. LỆNH KICK QUA UART
+                            // 2. LỆNH ĐỌC THANH GHI (0x02) 
+                            else if (cmd == 8'h02) begin 
+                                case (addr)
+                                    8'h00: read_buf <= reg_ctrl;
+                                    8'h04: read_buf <= reg_twd;
+                                    8'h08: read_buf <= reg_trst;
+                                    8'h0C: read_buf <= {16'd0, reg_arm_delay};
+                                    8'h10: read_buf <= status_in;
+                                    default: read_buf <= 32'hDEADBEEF; 
+                                endcase
+                                tx_byte_cnt <= 3'd0;
+                                state <= S_TX_READ; 
+                            end
+                            // 3. LỆNH KICK QUA UART
                             else if (cmd == 8'h03) begin
-                                sw_kick_out <= 1'b1; // Phát xung kick ảo
-                                tx_data <= 8'hAA;    // Trả ACK
+                                sw_kick_out <= 1'b1; 
+                                tx_data <= 8'hAA;    
                                 tx_req  <= 1'b1;
+                                state <= S_IDLE;
                             end
-                            // 3. LỆNH GET_STATUS
+                            // 4. LỆNH GET_STATUS
                             else if (cmd == 8'h04) begin
-                                tx_data <= status_in[7:0]; // Trả 8 bit STATUS lên PC
+                                tx_data <= status_in[7:0]; 
                                 tx_req  <= 1'b1;
+                                state <= S_IDLE;
                             end
-                        end
-                        state <= S_IDLE; 
+                            // Lệnh không hợp lệ
+                            else begin
+                                state <= S_IDLE;
+                            end // Đóng ELSE của CMD
+                        end else begin
+                            state <= S_IDLE; 
+                        end // Đóng ELSE của Checksum
                     end
                 endcase
             end
+            
+            // XỬ LÝ GỬI UART (TX) ĐƯỢC ĐƯA RA NGOÀI VÒNG LẶP RX
+            if (state == S_TX_READ) begin
+                if (tx_ready && !tx_req) begin 
+                    tx_data <= read_buf[7:0];  
+                    tx_req  <= 1'b1;           
+                    read_buf <= {8'h00, read_buf[31:8]}; 
+                    
+                    if (tx_byte_cnt == 3'd3) begin
+                        state <= S_IDLE;       
+                    end else begin
+                        tx_byte_cnt <= tx_byte_cnt + 1'b1;
+                    end
+                end
+            end
+            
         end
     end
 endmodule
