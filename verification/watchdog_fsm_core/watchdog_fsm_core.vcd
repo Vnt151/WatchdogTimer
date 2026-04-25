@@ -1,0 +1,19 @@
+$date
+	Sat Apr 25 18:15:57 2026
+$end
+$version
+	ModelSim Version 2020.1
+$end
+$timescale
+	1ps
+$end
+$scope module tb_watchdog_fsm_core $end
+$var reg 1 ! en_clean $end
+$upscope $end
+$enddefinitions $end
+#0
+b0 !
+#200000
+b1 !
+#1500135000
+b0 !
