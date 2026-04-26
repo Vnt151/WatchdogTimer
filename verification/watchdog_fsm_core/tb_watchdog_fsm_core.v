@@ -58,13 +58,13 @@ module tb_watchdog_fsm_core();
     // --- Main Test Sequence ---
     initial begin
         // Case 1: Initial Reset
-        rst_n = 0; en_clean = 0; wdi_clean = 1; sw_kick = 0;
+        rst_n = 0; en_clean = 1; wdi_clean = 1; sw_kick = 0;
         ctrl_reg = 0; tWD_ms = 50; tRST_ms = 20; arm_delay_us = 150;
         #100 rst_n = 1;
         $display("T=%0t | System Reset Released", $time);
 
         // Case 2: Enable & Arming Delay (Ignore Kicks)
-        #100 en_clean = 1;
+        #100 en_clean = 0;
         $display("T=%0t | System Enabled (ST_ARMING). Sending dummy kicks...", $time);
         repeat(5) begin
             #500 wdi_clean = 0; #500 wdi_clean = 1; // Kick hardware
@@ -98,7 +98,7 @@ module tb_watchdog_fsm_core();
         $display("T=%0t | Software Kick sent. STATUS Bit 4: %b", $time, status_out[4]);
 
         // Case 7: System Disable
-        #100000 en_clean = 0;
+        #100000 en_clean = 1;
         $display("T=%0t | System Disabled. Returning to IDLE", $time);
 
         // Case 8: Dynamic Parameter Change (Thay doi tWD khi dang chay)
