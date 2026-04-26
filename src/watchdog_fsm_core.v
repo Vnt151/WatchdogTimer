@@ -33,7 +33,7 @@ module watchdog_fsm_core (
     // XỬ LÝ NGUỒN TÍN HIỆU KÉP (HARDWARE OR SOFTWARE)
     // =========================================================================
     // Enable = Nút S2 GẠT XUỐNG (0->1 do active low) HOẶC Bit 0 của CTRL = 1
-    wire final_en = en_clean | ctrl_reg[0];
+    wire final_en = (~en_clean) | ctrl_reg[0];
     
     // Kick = Nút S1 CẠNH XUỐNG HOẶC Lệnh KICK từ UART
     reg wdi_clean_d; 
