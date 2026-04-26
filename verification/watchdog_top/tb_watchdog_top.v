@@ -82,7 +82,6 @@ module tb_watchdog_top();
         // bo loc io_debounce can 20ms on dinh de chot trang thai
         $display("T=%0t | Action: Pressing S2 (Enable) for 22ms...", $time);
         s2_en = 0; #22000000; 
-        s2_en = 1;
         
         // cho Arming Delay mac dinh (150us) va kiem tra LED trang thai
         wait(led4_enout == 1'b1);
