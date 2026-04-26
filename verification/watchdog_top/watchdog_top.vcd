@@ -1,0 +1,22 @@
+$date
+	Sun Apr 26 09:50:34 2026
+$end
+$version
+	ModelSim Version 2020.1
+$end
+$timescale
+	1ps
+$end
+$scope module tb_watchdog_top $end
+$scope module dut $end
+$var wire 1 ! s2_en $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+#0
+1!
+1!
+#15000000
+0!
+#22015000000
+1!
