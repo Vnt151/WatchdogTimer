@@ -68,7 +68,7 @@ module tb_regfile_and_parser ();
             // ket thuc goi tin
             rx_valid = 0;
             rx_data = 0;
-            repeat(3) @(posedge clk); // Doi FSM xu ly xong S_CHK
+            repeat(5) @(posedge clk); // Doi FSM xu ly xong S_CHK
         end
     endtask
 
@@ -110,6 +110,40 @@ module tb_regfile_and_parser ();
         rx_data = 8'hFF; repeat(4) @(posedge clk);     // du lieu rac
         rx_data = 8'h00; @(posedge clk);               // sai checksum (phai la 0xFF ^ 0x08 ^ 0x04 = 0xF7)
         rx_valid = 0;
+        #100;
+
+        // case 6: Doc thanh ghi tWD (Addr 0x04) - Kiem tra lenh 0x02
+        $display("[%0t] TEST 6: Read tWD Register (Expect 5000)", $time);
+        send_packet(8'h02, 8'h04, 8'h00, 32'h0);
+        repeat(4) begin
+            wait(tx_req == 1'b1);
+            $display("[%0t]   -> Received TX Byte: 0x%h", $time, tx_data);
+            @(posedge clk);
+        end
+
+        // case 7: Doc thanh ghi STATUS (Addr 0x10)
+        $display("[%0t] TEST 7: Read STATUS Register", $time);
+        status_in = 32'hABCDEFF0; 
+        send_packet(8'h02, 8'h10, 8'h00, 32'h0);
+        repeat(4) begin
+            wait(tx_req == 1'b1);
+            $display("[%0t]   -> Received STATUS Byte: 0x%h", $time, tx_data);
+            @(posedge clk);
+        end
+
+        // case 8: Kiem tra bat tay tx_ready (Handshake)
+        $display("[%0t] TEST 8: Read with UART Busy (tx_ready=0)", $time);
+        tx_ready = 0; // Gia lap UART dang ban
+        send_packet(8'h02, 8'h08, 8'h00, 32'h0); // Doc tRST
+        #200;
+        if (tx_req == 0) $display("[%0t]   -> Success: FSM is waiting for tx_ready", $time);
+        
+        tx_ready = 1; // Giai phong UART
+        repeat(4) begin
+            wait(tx_req == 1'b1);
+            $display("[%0t]   -> Received Byte after Busy: 0x%h", $time, tx_data);
+            @(posedge clk);
+        end
         #200;
         $display("[%0t] ALL TESTS FINISHED", $time);
         $finish;
