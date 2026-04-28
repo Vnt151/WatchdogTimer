@@ -68,7 +68,7 @@ module tb_regfile_and_parser ();
             // ket thuc goi tin
             rx_valid = 0;
             rx_data = 0;
-            repeat(5) @(posedge clk); // Doi FSM xu ly xong S_CHK
+            repeat(1) @(posedge clk); // Doi FSM xu ly xong S_CHK
         end
     endtask
 
@@ -86,18 +86,22 @@ module tb_regfile_and_parser ();
         // (de test bit 2 W1C tu xoa)
         $display("[%0t] TEST 1: Write to CTRL (Bit 2)", $time);
         send_packet(8'h01, 8'h00, 8'h04, 32'h00000004);
+        wait(tx_req == 1'b1); @(posedge clk); wait(tx_req == 1'b0);
     
         // case 2: ghi vao thanh ghi tWD (Addr 0x04) gia tri 5000
         $display("[%0t] TEST 2: Write to tWD (Val: 5000)", $time);
         send_packet(8'h01, 8'h04, 8'h04, 32'd5000);
+        wait(tx_req == 1'b1); @(posedge clk); wait(tx_req == 1'b0);
 
         // case 3: gui lenh KICK (CMD 0x03)
         $display("[%0t] TEST 3: Send KICK Command", $time);
         send_packet(8'h03, 8'h00, 8'h00, 32'h0);
+        wait(tx_req == 1'b1); @(posedge clk); wait(tx_req == 1'b0);
 
         // case 4: lenh Get Status (CMD 0x04)
         $display("[%0t] TEST 4: Get Status", $time);
         send_packet(8'h04, 8'h00, 8'h00, 32'h0);
+        wait(tx_req == 1'b1); @(posedge clk); wait(tx_req == 1'b0);
 
         // case 5: test Checksum loi (Module khong duoc ghi de)
         $display("[%0t] TEST 5: Error Checksum (Should fail)", $time);
@@ -118,7 +122,7 @@ module tb_regfile_and_parser ();
         repeat(4) begin
             wait(tx_req == 1'b1);
             $display("[%0t]   -> Received TX Byte: 0x%h", $time, tx_data);
-            @(posedge clk);
+            @(posedge clk); wait(tx_req == 1'b0);
         end
 
         // case 7: Doc thanh ghi STATUS (Addr 0x10)
@@ -129,6 +133,7 @@ module tb_regfile_and_parser ();
             wait(tx_req == 1'b1);
             $display("[%0t]   -> Received STATUS Byte: 0x%h", $time, tx_data);
             @(posedge clk);
+            wait(tx_req == 1'b0);
         end
 
         // case 8: Kiem tra bat tay tx_ready (Handshake)
@@ -143,7 +148,35 @@ module tb_regfile_and_parser ();
             wait(tx_req == 1'b1);
             $display("[%0t]   -> Received Byte after Busy: 0x%h", $time, tx_data);
             @(posedge clk);
+            wait(tx_req == 1'b0);
         end
+
+        // CASE 9: Doc lai thanh ghi CTRL de chung minh tinh R/W
+        $display("[%0t] TEST 9: Read CTRL Register", $time);
+        send_packet(8'h02, 8'h00, 8'h00, 32'h0); // CMD=0x02, ADDR=0x00
+        repeat(4) begin
+            wait(tx_req == 1'b1);
+            $display("   -> CTRL Byte: 0x%h", tx_data);
+            @(posedge clk);
+            wait(tx_req == 1'b0);
+        end
+
+        // CASE 10: Ghi va doc thanh ghi arm_delay_us (0x0C)
+        $display("[%0t] TEST 9: Write/Read arm_delay_us", $time);
+    
+        // Ghi ga tri 500 (0x01F4) vao dia chi 0x0C
+        send_packet(8'h01, 8'h0C, 8'h04, 32'd500); 
+        wait(tx_req == 1'b1); @(posedge clk); wait(tx_req == 1'b0);
+    
+        // doc lai de kiem tra
+        send_packet(8'h02, 8'h0C, 8'h00, 32'h0);
+        repeat(4) begin
+            wait(tx_req == 1'b1);
+            $display("   -> arm_delay Byte: 0x%h", tx_data);
+            @(posedge clk);
+            wait(tx_req == 1'b0);
+        end
+
         #200;
         $display("[%0t] ALL TESTS FINISHED", $time);
         $finish;
